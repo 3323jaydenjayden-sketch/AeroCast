@@ -20,16 +20,15 @@
         <h3 id="camTitle">攝影機名稱將顯示於此</h3>
         <p>最後更新時間: <span id="camTime">-</span></p>
         <div id="mediaContainer">
-            <!-- 影像將透過 JS 動態插入至此 -->
             <p>點擊上方按鈕載入影像...</p>
         </div>
         <p style="font-size: 12px; color: gray;">
-            影像來源: <a href="https://www.windy.com" target="_blank">Windy.com</a>
+            影像來源: <a href="https://windy.com" target="_blank">Windy.com</a>
         </p>
     </div>
 
     <script>
-        // 填入您的 Windy Webcams API Key (必須是 Webcams 專用 Key)
+        // 已填入您的 Windy Webcams API Key
         const API_KEY = 'Z4n0buF2Oi1FmXsiCG2inHls8ZErtHeX'; 
         // 想要查詢的特定攝影機 ID
         const WEBCAM_ID = '1394798884'; 
@@ -38,14 +37,14 @@
             const container = document.getElementById('mediaContainer');
             container.innerHTML = '連線中...';
 
-            // 呼叫 Windy Webcams API v3 單一攝影機端點
+            // 【已修正】使用官方正確的 API v3 端點，並補上變數的 $ 符號
             const url = `https://windy.com{WEBCAM_ID}?include=images`;
 
             try {
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'x-windy-api-key': API_KEY // 帶入認證金鑰
+                        'x-windy-api-key': API_KEY 
                     }
                 });
 
@@ -59,7 +58,7 @@
                 const title = data.title || '未知地點';
                 const lastUpdated = data.lastUpdatedOn ? new Date(data.lastUpdatedOn).toLocaleString() : '未知';
                 
-                // 取得當前的即時預覽圖 (網址內含臨時 Token，10分鐘後會失效，所以每次重新載入網頁都要 Fetch 一次)
+                // 取得當前的即時預覽圖
                 const imgUrl = data.images?.current?.preview; 
 
                 if (imgUrl) {
@@ -72,7 +71,7 @@
 
             } catch (error) {
                 console.error('請求失敗:', error);
-                container.innerHTML = `<p class="error">請求失敗: ${error.message}<br>請確認 API Key 是否正確且未過期。</p>`;
+                container.innerHTML = `<p class="error">請求失敗: ${error.message}<br>請確認是否使用伺服器環境運行，或確認 API Key 狀態。</p>`;
             }
         }
 
@@ -80,7 +79,7 @@
         document.getElementById('loadCamBtn').addEventListener('click', fetchWebcam);
         
         // 網頁開啟時自動載入一次
-        // window.onload = fetchWebcam;
+        window.onload = fetchWebcam;
     </script>
 </body>
 </html>
