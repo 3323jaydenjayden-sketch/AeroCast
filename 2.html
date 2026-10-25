@@ -1,5 +1,3 @@
-# Windy 全功能頂級氣象儀表板
-
 <!DOCTYPE html>
 <html lang="zh-TW" class="dark">
 <head>
@@ -19,7 +17,6 @@
                         glass: 'rgba(15, 23, 42, 0.88)',
                         glassBorder: 'rgba(255, 255, 255, 0.12)',
                         accent: '#3b82f6'
-
                     }
                 }
             }
@@ -39,7 +36,6 @@
     <style>
         body, html {
             margin: 0;
-
             padding: 0;
             height: 100%;
             width: 100%;
@@ -59,7 +55,6 @@
         }
 
         #windy {
-
             width: 100%;
             height: 100%;
         }
@@ -80,7 +75,6 @@
             box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
         }
 
-
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -100,7 +94,6 @@
         }
 
        
-
     </style>
 </head>
 <body class="relative flex flex-col h-screen w-screen overflow-hidden">
@@ -120,7 +113,6 @@
 
     <!-- Header & Navigation -->
     <header class="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-
         <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center space-x-3 pointer-events-auto">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg">
                 <i class="fa-solid fa-wind text-lg"></i>
@@ -140,7 +132,6 @@
                     class="w-full glass-panel pl-10 pr-10 py-2.5 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     onkeydown="if(event.key === 'Enter') searchCity()"
                 >
-
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
                 <button onclick="searchCity()" class="absolute right-2.5 top-2 text-slate-400 hover:text-white p-1" title="搜尋">
                     <i class="fa-solid fa-arrow-right text-xs"></i>
@@ -160,7 +151,6 @@
                 class="glass-panel w-10 h-10 rounded-xl flex items-center justify-center text-slate-200 hover:text-white md:hidden transition-all"
             >
                 <i class="fa-solid fa-sliders text-base"></i>
-
             </button>
         </div>
     </header>
@@ -181,7 +171,6 @@
             </button>
         </div>
 
-
         <!-- Section 1: Weather Layers -->
         <div id="section-layers" class="flex-1 overflow-y-auto space-y-3 pr-1">
             <h2 class="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2">氣象圖層選擇</h2>
@@ -201,7 +190,6 @@
                 <button onclick="changeLayer('clouds')" id="btn-clouds" class="layer-btn flex items-center space-x-2 p-3 rounded-xl border border-slate-700/60 text-xs font-medium hover:bg-slate-800/80 transition-all">
                     <i class="fa-solid fa-cloud text-gray-300 text-sm"></i>
                     <span>雲層覆蓋</span>
-
                 </button>
                 <button onclick="changeLayer('pressure')" id="btn-pressure" class="layer-btn flex items-center space-x-2 p-3 rounded-xl border border-slate-700/60 text-xs font-medium hover:bg-slate-800/80 transition-all">
                     <i class="fa-solid fa-gauge-high text-emerald-400 text-sm"></i>
@@ -221,7 +209,6 @@
         </div>
 
         <!-- Section 2: Point Forecast API Analytics -->
-
         <div id="section-forecast" class="flex-1 overflow-y-auto space-y-3 pr-1 hidden">
             <h2 class="text-xs font-bold text-slate-400 tracking-wider uppercase mb-2">Point Forecast v2 數據</h2>
 
@@ -240,7 +227,6 @@
                 <h2 class="text-xs font-bold text-slate-400 tracking-wider uppercase">即時網路攝影機</h2>
                 <span id="webcam-count" class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-mono">0 個找到</span>
             </div>
-
 
             <div id="webcams-list" class="space-y-3">
                 <p class="text-xs text-slate-400 text-center py-6">正在搜尋此區域附近的 Windy Webcams...</p>
@@ -261,7 +247,6 @@
         </div>
     </div>
 
-
     <script>
         // Windy & Map Keys
         const MAP_FORECAST_KEY = 'wh1GMcHy4knmewarLjT0zhWc8VC0hoOm';
@@ -278,10 +263,9 @@
         };
 
         function initDashboardMap() {
-            // 只保留原廠官方初始化管道
+            // 雙軌防禦：安全偵測 Windy 原廠初始化，若失敗則立即執行標準 Leaflet
             if (typeof windyInit === 'function') {
                 const options = {
-
                     key: MAP_FORECAST_KEY,
                     lat: 23.9739,
                     lon: 120.9820,
@@ -293,7 +277,7 @@
                     windyInit(options, windyAPI => {
                         windyStore = windyAPI.store;
                         windyMap = windyAPI.map;
-                        map = windyAPI.map;
+                        map = windyAPI.map; // 統一指針橋接
 
                         bindMapEvents();
                         document.getElementById("api-status").textContent = "Windy 地圖已連線";
@@ -301,12 +285,31 @@
                         fetchPointForecastAPI(23.9739, 120.9820, "台灣中心");
                         fetchWebcamsAPI(23.9739, 120.9820);
                     });
-
+                    return; // 成功進入原廠模式，中斷獨立的 Leaflet 分支
                 } catch (e) {
-                    console.error("Windy 引擎初始化異常", e);
+                    console.warn("Windy 初始化失敗，切換至 Leaflet 標準底圖模式", e);
                 }
-            } else {
-                console.error("未偵測到 Windy 原廠核心腳本 (libBoot.js)");
+            }
+
+            // 安全防禦分支：當 libBoot 缺損、封鎖或金鑰受限時，自動載入標準 Leaflet，絕不發生黑畫面
+            initFallbackLeaflet();
+        }
+
+        function initFallbackLeaflet() {
+            try {
+                map = L.map('windy').setView([23.9739, 120.9820], 7);
+                L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; CartoDB &copy; OpenStreetMap'
+                }).addTo(map);
+
+                bindMapEvents();
+                document.getElementById("api-status").textContent = "備援地圖模式";
+                showToast("已以 Leaflet 暗黑地圖模式載入");
+                fetchPointForecastAPI(23.9739, 120.9820, "台灣中心");
+                fetchWebcamsAPI(23.9739, 120.9820);
+            } catch (err) {
+                console.error("地圖核心完全損壞", err);
             }
         }
 
@@ -321,7 +324,6 @@
 
             map.on('move', () => {
                 const center = map.getCenter();
-
                 document.getElementById('current-pos').innerText =
                     `緯度: ${center.lat.toFixed(2)}, 經度: ${center.lng.toFixed(2)}`;
             });
@@ -332,6 +334,8 @@
             if (windyStore) {
                 windyStore.set('overlay', layerName);
                 showToast(`已切換至圖層：${layerName}`);
+            } else {
+                showToast("當前備援模式不支援 Windy 粒子圖層切換");
             }
 
             document.querySelectorAll('.layer-btn').forEach(btn => btn.classList.remove('active'));
@@ -341,7 +345,6 @@
 
         // Feature 2: Custom Windy Point Forecast API v2 Call
         async function fetchPointForecastAPI(lat, lon, labelName = null) {
-
             if (!map) return;
 
             if (currentMarker) {
@@ -361,7 +364,6 @@
             const forecastContainer = document.getElementById('forecast-content');
             forecastContainer.innerHTML = `
                 <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center justify-center text-xs text-slate-300">
-
                     <i class="fa-solid fa-spinner animate-spin mr-2"></i>正在從 Windy Point Forecast API v2 請求數據...
                 </div>
             `;
@@ -382,15 +384,14 @@
                     body: JSON.stringify(payload)
                 });
 
-
                 if (response.ok) {
                     const data = await response.json();
                     renderPointForecastUI(data, lat, lon, labelName);
                 } else {
-                    document.getElementById('forecast-content').innerHTML = `<div class="p-3 text-xs text-slate-400">Windy Point API 回傳失敗，請檢查 Key 權限。</div>`;
+                    renderFallbackPointForecastUI(lat, lon, labelName);
                 }
             } catch (err) {
-                document.getElementById('forecast-content').innerHTML = `<div class="p-3 text-xs text-slate-400">連線異常，無法取得數據。</div>`;
+                renderFallbackPointForecastUI(lat, lon, labelName);
             }
 
             switchTab('forecast');
@@ -402,7 +403,6 @@
             const gustVal = data['windGust-surface'] ? data['windGust-surface'][0].toFixed(1) : (7.2).toFixed(1);
             const precipVal = data['precip-surface'] ? data['precip-surface'][0].toFixed(1) : (0.0).toFixed(1);
             const rhVal = data['rh-surface'] ? Math.round(data['rh-surface'][0]) : 72;
-
 
             const forecastContainer = document.getElementById('forecast-content');
             forecastContainer.innerHTML = `
@@ -423,7 +423,6 @@
                         <div class="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/40">
                             <span class="text-[10px] text-slate-400 block mb-0.5">風速 (wind)</span>
                             <div class="text-lg font-extrabold text-blue-400">${windVal} <span class="text-xs font-normal">m/s</span></div>
-
                         </div>
                         <div class="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/40">
                             <span class="text-[10px] text-slate-400 block mb-0.5">陣風 (windGust)</span>
@@ -443,10 +442,40 @@
                     <div class="mt-3 pt-2.5 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
                         <span>數據來源: Windy Point API v2</span>
                         <span>POST 請求完成</span>
-
                     </div>
                 </div>
             `;
+        }
+
+        async function renderFallbackPointForecastUI(lat, lon, labelName) {
+            const container = document.getElementById('forecast-content');
+            container.innerHTML = `<div class="p-3 text-xs text-slate-300">Windy Point Forecast 無法回應，正在嘗試 Open-Meteo 備援資料…</div>`;
+            try {
+                const url = `https://open-meteo.com{lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=7&timezone=auto`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Open-Meteo request failed');
+                const d = await res.json();
+                const c = d.current || {};
+                const daily = d.daily || {};
+                const fmt = (v, unit='') => v == null ? '—' : `${v}${unit}`;
+                container.innerHTML = `
+                  <div class="p-4 rounded-xl bg-slate-900/80 border border-amber-500/30">
+                    <div class="flex justify-between gap-2 mb-3"><div><span class="text-[10px] text-amber-300 font-bold">備援資料 · Open-Meteo</span><h3 class="text-sm font-bold">${labelName || `${lat.toFixed(3)}, ${lon.toFixed(3)}`}</h3></div><span class="text-[10px] text-amber-200">非 Windy 資料</span></div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div class="p-3 rounded-lg bg-slate-800/70"><span class="text-xs text-slate-400">目前氣溫</span><div class="text-xl font-bold text-amber-300">${fmt(c.temperature_2m,' °C')}</div></div>
+                      <div class="p-3 rounded-lg bg-slate-800/70"><span class="text-xs text-slate-400">風速</span><div class="text-xl font-bold text-blue-300">${fmt(c.wind_speed_10m,' km/h')}</div></div>
+                      <div class="p-3 rounded-lg bg-slate-800/70"><span class="text-xs text-slate-400">相對濕度</span><div class="text-xl font-bold text-cyan-300">${fmt(c.relative_humidity_2m,'%')}</div></div>
+                      <div class="p-3 rounded-lg bg-slate-800/70"><span class="text-xs text-slate-400">降雨</span><div class="text-xl font-bold text-teal-300">${fmt(c.precipitation,' mm')}</div></div>
+                      <div class="p-3 rounded-lg bg-slate-800/70"><span class="text-xs text-slate-400">陣風</span><div class="text-lg font-bold">${fmt(c.wind_gusts_10m,' km/h')}</div></div>
+                      <div class="p-3 rounded-lg bg-slate-800/70"><span class="text-xs text-slate-400">預報時區</span><div class="text-sm font-bold">${d.timezone || '—'}</div></div>
+                    </div>
+                    <h4 class="font-bold text-xs mt-4 mb-2">未來 7 日</h4>
+                    <div class="space-y-1">${(daily.time || []).map((day,i)=>`<div class="flex justify-between gap-2 text-xs p-2 rounded bg-slate-800/60"><span>${day}</span><span>${fmt(daily.temperature_2m_min?.[i],'°')} / ${fmt(daily.temperature_2m_max?.[i],'°')}</span><span>降雨機率 ${fmt(daily.precipitation_probability_max?.[i],'%')}</span></div>`).join('')}</div>
+                    <p class="text-[10px] text-slate-500 mt-3">資料來源：Open-Meteo。Windy Point Forecast 未成功時才顯示此備援。</p>
+                  </div>`;
+            } catch (e) {
+                container.innerHTML = `<div class="p-3 rounded-xl bg-slate-900/80 border border-red-500/30 text-xs text-red-200">Windy Point Forecast 與 Open-Meteo 都無法取得資料。請確認網路、API Key、方案權限或瀏覽器 Console 錯誤。</div>`;
+            }
         }
 
         // Feature 3: Webcams Integration
@@ -463,7 +492,6 @@
 
                 if (response.ok) {
                     const data = await response.json();
-
                     renderWebcams(data.result?.webcams || []);
                 } else {
                     renderFallbackWebcams();
@@ -484,7 +512,6 @@
             `;
         }
 
-
         function renderWebcams(webcams) {
             const listContainer = document.getElementById('webcams-list');
             const countBadge = document.getElementById('webcam-count');
@@ -504,7 +531,6 @@
                             <i class="fa-solid fa-circle text-[6px] mr-1 animate-pulse"></i>LIVE
                         </span>
                     </div>
-
                     <div class="p-2.5">
                         <h4 class="text-xs font-bold text-white truncate">${cam.title || '未知點位'}</h4>
                         <p class="text-[10px] text-slate-400 mt-0.5">來源: Windy Webcams Network</p>
@@ -524,82 +550,8 @@
                     },
                     () => showToast("無法取得您的位置權限")
                 );
-
             } else {
                 showToast("您的瀏覽器不支援 Geolocation");
             }
         }
-
-        // Preset Locations
-        function flyToLocation(lat, lng, name = "") {
-            if (!map) return;
-            try {
-                map.flyTo([lat, lng], 10, { duration: 1.5 });
-                fetchPointForecastAPI(lat, lng, name);
-                fetchWebcamsAPI(lat, lng);
-            } catch(e) {
-                console.error("地圖跳轉執行異常", e);
-            }
-        }
-
-        // Search Bar
-        async function searchCity() {
-
-            const query = document.getElementById('city-search').value.trim();
-            if (!query) return;
-
-            try {
-                const res = await fetch(`https://openstreetmap.org{encodeURIComponent(query)}`);
-                const data = await res.json();
-
-                if (data && data.length > 0) {
-                    const { lat, lon, display_name } = data[0];
-                    const cityName = display_name.split(',')[0];
-                    flyToLocation(parseFloat(lat), parseFloat(lon), cityName);
-                    showToast(`已成功定位至：${cityName}`);
-                } else {
-                    showToast("找不到該地點，請重新嘗試");
-                }
-            } catch (err) {
-                showToast("城市搜尋發生錯誤");
-            }
-        }
-
-
-        // Tabs Toggle
-        function switchTab(tabName) {
-            ['layers', 'forecast', 'webcams'].forEach(tab => {
-                const btn = document.getElementById(`tab-${tab}`);
-                const sec = document.getElementById(`section-${tab}`);
-
-                if (tab === tabName) {
-                    if (btn) btn.classList.add('bg-blue-600', 'text-white');
-                    if (btn) btn.classList.remove('text-slate-400');
-                    if (sec) sec.classList.remove('hidden');
-                } else {
-                    if (btn) btn.classList.remove('bg-blue-600', 'text-white');
-                    if (btn) btn.classList.add('text-slate-400');
-                    if (sec) sec.classList.add('hidden');
-                }
-            });
-        }
-
-        function toggleSidebar() {
-
-            document.getElementById('sidebar').classList.toggle('-translate-x-full');
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            const msgEl = document.getElementById('toast-msg');
-            if (!toast || !msgEl) return;
-
-            msgEl.innerText = message;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 3000);
-        }
-    </script>
-</body>
-</html>
-
 
