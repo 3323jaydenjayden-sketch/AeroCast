@@ -5,81 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Windy API Webcam 請求範例</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .webcam-container { margin-top: 20px; border: 1px solid #ccc; padding: 15px; max-width: 600px; }
-        .webcam-img { width: 100%; height: auto; display: block; margin-top: 10px; }
-        .error { color: red; font-weight: bold; }
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .webcam-container { 
+            margin-top: 20px; 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            max-width: 640px; 
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 5px;
+        }
+        iframe {
+            width: 100%;
+            height: 480px;
+            border: none;
+            display: block;
+        }
     </style>
 </head>
 <body>
 
-    <h2>Windy API Webcam 動態請求</h2>
-    <button id="loadCamBtn">載入/更新 攝影機影像</button>
+    <h2>Windy API Webcam 即時影像</h2>
 
     <div class="webcam-container">
-        <h3 id="camTitle">攝影機名稱將顯示於此</h3>
-        <p>最後更新時間: <span id="camTime">-</span></p>
-        <div id="mediaContainer">
-            <p>點擊上方按鈕載入影像...</p>
-        </div>
-        <p style="font-size: 12px; color: gray;">
+        <!-- 直接使用官方嵌入機制，徹底避開瀏覽器 CORS 封鎖與語法報錯問題 -->
+        <iframe 
+            src="https://windy.com" 
+            allowfullscreen>
+        </iframe>
+        <p style="font-size: 12px; color: gray; margin-top: 10px; text-align: right;">
             影像來源: <a href="https://windy.com" target="_blank">Windy.com</a>
         </p>
     </div>
 
-    <script>
-        // 已填入您的 Windy Webcams API Key
-        const API_KEY = 'Z4n0buF2Oi1FmXsiCG2inHls8ZErtHeX'; 
-        // 想要查詢的特定攝影機 ID
-        const WEBCAM_ID = '1394798884'; 
-
-        async function fetchWebcam() {
-            const container = document.getElementById('mediaContainer');
-            container.innerHTML = '連線中...';
-
-            // 【已修正】使用官方正確的 API v3 端點，並補上變數的 $ 符號
-            const url = windy.com{WEBCAM_ID}?include=images;
-
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'x-windy-api-key': API_KEY 
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                // 解析回傳的資料結構
-                const title = data.title || '未知地點';
-                const lastUpdated = data.lastUpdatedOn ? new Date(data.lastUpdatedOn).toLocaleString() : '未知';
-                
-                // 取得當前的即時預覽圖
-                const imgUrl = data.images?.current?.preview; 
-
-                if (imgUrl) {
-                    document.getElementById('camTitle').innerText = title;
-                    document.getElementById('camTime').innerText = lastUpdated;
-                    container.innerHTML = `<img src="${imgUrl}" class="webcam-img" alt="${title}">`;
-                } else {
-                    container.innerHTML = '<p class="error">找不到合法的影像網址。</p>';
-                }
-
-            } catch (error) {
-                console.error('請求失敗:', error);
-                container.innerHTML = `<p class="error">請求失敗: ${error.message}<br>請確認是否使用伺服器環境運行，或確認 API Key 狀態。</p>`;
-            }
-        }
-
-        // 綁定按鈕點擊事件
-        document.getElementById('loadCamBtn').addEventListener('click', fetchWebcam);
-        
-        // 網頁開啟時自動載入一次
-        window.onload = fetchWebcam;
-    </script>
 </body>
 </html>
