@@ -269,6 +269,9 @@
                     lon: 120.9820,
                     zoom: 7,
                     verbose: false
+                     // 💡 針對電腦版環境的終極解法：
+    disableWebGL: false,       // 強制不禁用 WebGL
+    expertMode: true           // 強制開啟專家模式，跳過 Windy 內建的平台限制檢查
                 };
 
                 windyInit(options, windyAPI => {
