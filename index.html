@@ -183,7 +183,7 @@
                     <i class="fa-solid fa-temperature-half text-amber-400 text-sm"></i>
                     <span>氣溫分佈</span>
                 </button>
-                <button onclick="changeLayer('rainAccu')" id="btn-rainAccu" class="layer-btn flex items-center space-x-2 p-3 rounded-xl border border-slate-700/60 text-xs font-medium hover:bg-slate-800/80 transition-all">
+                <button onclick="changeLayer('rain')" id="btn-rain" class="layer-btn flex items-center space-x-2 p-3 rounded-xl border border-slate-700/60 text-xs font-medium hover:bg-slate-800/80 transition-all">
                     <i class="fa-solid fa-cloud-showers-heavy text-cyan-400 text-sm"></i>
                     <span>降雨與雷達</span>
                 </button>
@@ -269,9 +269,6 @@
                     lon: 120.9820,
                     zoom: 7,
                     verbose: false
-                     // 💡 針對電腦版環境的終極解法：
-    disableWebGL: false,       // 強制不禁用 WebGL
-    expertMode: true           // 強制開啟專家模式，跳過 Windy 內建的平台限制檢查
                 };
 
                 windyInit(options, windyAPI => {
@@ -328,15 +325,13 @@
             const activeBtn = document.getElementById(`btn-${layerName}`);
             if (activeBtn) activeBtn.classList.add('active');
 
-           const layerTitles = {
-        // 您原本的設定（非常正確）
-        'wind': '風速與風場',
-        'temp': '氣溫分佈',
-        'rainAccu': '累積降雨量', // 修正更精準的語意
-        'clouds': '雲層覆蓋',
-        'pressure': '氣壓分佈',
-        };
-
+            const layerTitles = {
+                'wind': '風速與風場',
+                'temp': '氣溫分佈',
+                'rain': '降雨與雷達',
+                'clouds': '雲層覆蓋',
+                'pressure': '氣壓分佈'
+            };
             showToast(`已切換至圖層：${layerTitles[layerName] || layerName}`);
         }
 
