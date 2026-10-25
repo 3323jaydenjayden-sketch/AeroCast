@@ -398,8 +398,8 @@ button { cursor: pointer; }
  * 不要把任何私密金鑰放進公開儲存庫。
  */
 const CONFIG = {
-  WINDY_MAP_KEY: "wh1GMcHy4knmewarLjT0zhWc8VC0hoOm",
-  WEBCAMS_KEY: "Z4n0buF2Oi1FmXsiCG2inHls8ZErtHeX"
+  WINDY_MAP_KEY: "YOUR_WINDY_MAP_FORECAST_KEY",
+  WEBCAMS_KEY: "YOUR_WEBCAMS_KEY"
 };
 
 const DEFAULT_LOCATION = {
@@ -561,8 +561,10 @@ function initWindyMap() {
       windyPicker = picker;
       mapMode = "windy";
 
+      // Windy 成功後徹底隱藏備援地圖，避免縮放時從底層露出。
       $("map").classList.add("hidden");
       $("windy").style.display = "block";
+      $("windy").style.visibility = "visible";
 
       try {
         const allowed = store.getAllowed("overlay");
@@ -955,8 +957,25 @@ async function loadWebcams(lat, lon) {
   }
 }
 
+// 視窗、側欄或容器尺寸改變時，通知 Leaflet/Windy 重新計算地圖尺寸。
+let resizeTimer = null;
+function refreshMapSize() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (map && typeof map.invalidateSize === "function") {
+      map.invalidateSize({pan: false, animate: false});
+    }
+    // Windy 內部圖層有時在瀏覽器縮放後才完成排版，再補一次 resize。
+    window.dispatchEvent(new Event("resize"));
+  }, 180);
+}
+
+window.addEventListener("resize", refreshMapSize, {passive: true});
+
 window.addEventListener("load", () => {
   initWindyMap();
+  setTimeout(refreshMapSize, 500);
+  setTimeout(refreshMapSize, 1400);
 });
 </script>
 </body>
