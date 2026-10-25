@@ -1,0 +1,963 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>AeroCast｜Weather Intelligence</title>
+
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+<script src="https://api.windy.com/assets/map-forecast/libBoot.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+:root {
+  --bg: #07111f;
+  --panel: rgba(8, 19, 34, .94);
+  --border: rgba(148, 163, 184, .2);
+  --blue: #38bdf8;
+  --text: #e5eef9;
+  --muted: #94a3b8;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+button, input { font: inherit; }
+button { cursor: pointer; }
+#map, #windy {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#map { z-index: 1; }
+#windy { z-index: 2; }
+#windy:empty { pointer-events: none; }
+#windy .leaflet-container { background: #07111f; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 40px rgba(0,0,0,.28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.topbar {
+  position: fixed;
+  z-index: 1000;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px;
+  border-radius: 16px;
+}
+.logo {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border-radius: 12px;
+  color: #04111f;
+  font-size: 23px;
+  font-weight: 900;
+  background: linear-gradient(135deg,#67e8f9,#38bdf8,#818cf8);
+}
+.brand-title { font-size: 15px; font-weight: 800; letter-spacing: .08em; }
+.brand-sub { color: var(--muted); font-size: 10px; margin-top: 3px; }
+
+.searchbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 14px;
+}
+.searchbar input {
+  width: min(32vw, 300px);
+  min-width: 120px;
+  border: 0;
+  outline: none;
+  color: white;
+  background: transparent;
+  padding: 8px;
+  font-size: 13px;
+}
+.searchbar input::placeholder { color: #8b9db3; }
+
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(30,41,59,.7);
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 12px;
+  transition: .18s ease;
+}
+.btn:hover { background: #164e63; border-color: #38bdf8; }
+.btn.primary { background: #0369a1; border-color: #0ea5e9; }
+.btn.active { background: #075985; border-color: #38bdf8; color: white; }
+.icon-btn {
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: rgba(15,23,42,.85);
+  color: white;
+  font-size: 17px;
+}
+
+.sidebar {
+  position: fixed;
+  z-index: 900;
+  left: 16px;
+  top: 86px;
+  bottom: 16px;
+  width: 310px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+  transition: transform .25s ease, opacity .25s ease;
+}
+.sidebar.closed {
+  transform: translateX(calc(-100% - 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 4px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  padding: 9px 3px;
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+.tab.active { background: #075985; color: white; }
+.section {
+  padding: 15px;
+  overflow-y: auto;
+  flex: 1;
+}
+.section-title {
+  font-size: 10px;
+  color: #94a3b8;
+  letter-spacing: .15em;
+  font-weight: 800;
+  margin: 5px 0 12px;
+}
+.layer-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+.layer-btn {
+  text-align: left;
+  min-height: 65px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(15,23,42,.7);
+  color: #cbd5e1;
+  font-size: 11px;
+}
+.layer-btn .emoji { display: block; font-size: 20px; margin-bottom: 6px; }
+.layer-btn.active {
+  border-color: #38bdf8;
+  background: rgba(3,105,161,.4);
+  color: white;
+}
+.city-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.city-btn {
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: rgba(30,41,59,.85);
+  border: 1px solid var(--border);
+  color: #cbd5e1;
+  font-size: 11px;
+}
+.city-btn:hover { border-color: #38bdf8; color: white; }
+
+.weather-hero {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: linear-gradient(145deg,rgba(14,116,144,.22),rgba(15,23,42,.6));
+}
+.temp {
+  font-size: 38px;
+  font-weight: 750;
+  letter-spacing: -2px;
+  margin: 6px 0;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.metric {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 11px;
+  background: rgba(15,23,42,.7);
+}
+.metric .name { color: var(--muted); font-size: 10px; }
+.metric .value { font-size: 17px; font-weight: 700; margin-top: 7px; }
+.daily-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(148,163,184,.12);
+  font-size: 11px;
+}
+.small { color: var(--muted); font-size: 11px; }
+.statusbar {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  margin-right: 6px;
+}
+.dot.ok { background: #34d399; }
+#toast {
+  position: fixed;
+  z-index: 2000;
+  right: 18px;
+  bottom: 22px;
+  max-width: min(420px,calc(100vw - 36px));
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: white;
+  display: none;
+}
+#map .leaflet-control-attribution {
+  background: rgba(5,12,24,.7);
+  color: #a8b5c8;
+}
+#map .leaflet-control-attribution a { color: #7dd3fc; }
+.hidden { display: none !important; }
+
+@media(max-width:700px) {
+  .topbar { top: 10px; left: 10px; right: 10px; flex-wrap: wrap; }
+  .brand { padding: 7px 9px; gap: 8px; }
+  .logo { width: 33px; height: 33px; font-size: 19px; }
+  .brand-title { font-size: 12px; }
+  .brand-sub { font-size: 9px; }
+  .searchbar { margin-left: auto; }
+  .searchbar input { width: 36vw; min-width: 90px; font-size: 12px; }
+  .searchbar .btn { padding: 8px; }
+  .sidebar { left: 10px; top: 112px; bottom: 10px; width: min(310px,calc(100vw - 20px)); }
+}
+</style>
+</head>
+
+<body>
+<div id="map"></div>
+<div id="windy"></div>
+
+<header class="topbar">
+  <div class="brand panel">
+    <div class="logo">A</div>
+    <div>
+      <div class="brand-title">AEROCAST</div>
+      <div class="brand-sub">WEATHER INTELLIGENCE</div>
+    </div>
+  </div>
+
+  <div class="searchbar panel">
+    <input id="searchInput" placeholder="搜尋城市或地點…" autocomplete="off">
+    <button class="btn primary" id="searchButton">搜尋</button>
+    <button class="icon-btn" id="locateButton" title="我的位置">⌖</button>
+    <button class="icon-btn" id="menuButton" title="切換側欄">☰</button>
+  </div>
+</header>
+
+<aside id="sidebar" class="sidebar panel">
+  <div class="tabs">
+    <button class="tab active" data-tab="layers">天氣圖層</button>
+    <button class="tab" data-tab="forecast">天氣預報</button>
+    <button class="tab" data-tab="webcams">Webcam</button>
+  </div>
+
+  <section class="section" id="section-layers">
+    <div class="section-title">WEATHER LAYERS</div>
+    <div class="layer-grid">
+      <button class="layer-btn active" data-layer="wind"><span class="emoji">〰️</span>風場與風速</button>
+      <button class="layer-btn" data-layer="temp"><span class="emoji">🌡️</span>氣溫分布</button>
+      <button class="layer-btn" data-layer="rain"><span class="emoji">🌧️</span>降雨與雷達</button>
+      <button class="layer-btn" data-layer="clouds"><span class="emoji">☁️</span>雲層覆蓋</button>
+      <button class="layer-btn" data-layer="pressure"><span class="emoji">📈</span>氣壓分布</button>
+    </div>
+
+    <div class="section-title" style="margin-top:24px">QUICK LOCATIONS</div>
+    <div class="city-grid">
+      <button class="city-btn" data-city="台北" data-lat="25.033" data-lon="121.565">台北</button>
+      <button class="city-btn" data-city="新竹" data-lat="24.813" data-lon="120.967">新竹</button>
+      <button class="city-btn" data-city="台中" data-lat="24.147" data-lon="120.673">台中</button>
+      <button class="city-btn" data-city="台南" data-lat="22.999" data-lon="120.227">台南</button>
+      <button class="city-btn" data-city="高雄" data-lat="22.627" data-lon="120.301">高雄</button>
+      <button class="city-btn" data-city="東京" data-lat="35.676" data-lon="139.650">東京</button>
+      <button class="city-btn" data-city="首爾" data-lat="37.566" data-lon="126.978">首爾</button>
+      <button class="city-btn" data-city="紐約" data-lat="40.713" data-lon="-74.006">紐約</button>
+    </div>
+
+    <div class="section-title" style="margin-top:24px">MAP INFORMATION</div>
+    <div class="metric">
+      <div class="name">目前中心座標</div>
+      <div id="coordinates" class="value" style="font-size:13px">24.000, 121.000</div>
+      <div class="small" id="mapMode" style="margin-top:8px">正在初始化地圖…</div>
+    </div>
+    <p class="small" style="line-height:1.7;margin-top:15px">
+      點擊地圖任意位置，可查詢該座標的天氣資訊。
+    </p>
+  </section>
+
+  <section class="section hidden" id="section-forecast">
+    <div class="section-title">POINT FORECAST</div>
+    <div id="forecastContent">
+      <div class="weather-hero">
+        <div class="small">尚未選擇地點</div>
+        <div style="font-size:14px;font-weight:700;margin-top:8px">點擊地圖查看天氣</div>
+        <p class="small" style="line-height:1.7">顯示實際 API 回傳的天氣資料，不會用預設數字假裝即時天氣。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="section-webcams">
+    <div class="section-title">LIVE WEBCAMS</div>
+    <div class="weather-hero">
+      <div style="font-size:14px;font-weight:700">附近即時攝影機</div>
+      <p class="small" style="line-height:1.8;margin-top:8px">
+        Webcam 服務需要有效的 API 金鑰與可用權限。設定完成後，這裡會顯示附近攝影機結果。
+      </p>
+      <div id="webcamContent" class="small">尚未搜尋攝影機。</div>
+    </div>
+  </section>
+
+  <div class="statusbar">
+    <span><i id="statusDot" class="dot"></i><span id="statusText">初始化中</span></span>
+    <span id="locationLabel">台灣</span>
+  </div>
+</aside>
+
+<div id="toast" class="panel"></div>
+
+<script>
+"use strict";
+
+/*
+ * 請在這裡填入自己的 API Key。
+ * 不要把任何私密金鑰放進公開儲存庫。
+ */
+const CONFIG = {
+  WINDY_MAP_KEY: "wh1GMcHy4knmewarLjT0zhWc8VC0hoOm",
+  WEBCAMS_KEY: "Z4n0buF2Oi1FmXsiCG2inHls8ZErtHeX"
+};
+
+const DEFAULT_LOCATION = {
+  name: "台灣",
+  lat: 23.9739,
+  lon: 120.9820,
+  zoom: 7
+};
+
+let map = null;
+let windyStore = null;
+let windyPicker = null;
+let mapMode = "loading";
+let marker = null;
+let toastTimer = null;
+let currentRequest = 0;
+
+const $ = id => document.getElementById(id);
+
+function toast(message) {
+  const el = $("toast");
+  el.textContent = message;
+  el.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.style.display = "none", 3200);
+}
+
+function setStatus(message, ok = false) {
+  $("statusText").textContent = message;
+  $("statusDot").classList.toggle("ok", ok);
+}
+
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach(button => {
+    button.classList.toggle("active", button.dataset.tab === name);
+  });
+
+  ["layers", "forecast", "webcams"].forEach(section => {
+    $("section-" + section).classList.toggle("hidden", section !== name);
+  });
+}
+
+document.querySelectorAll(".tab").forEach(button => {
+  button.addEventListener("click", () => showTab(button.dataset.tab));
+});
+
+$("menuButton").addEventListener("click", () => {
+  $("sidebar").classList.toggle("closed");
+  setTimeout(() => {
+    if (map && map.invalidateSize) map.invalidateSize();
+  }, 300);
+});
+
+function updateCoordinates(lat, lon) {
+  $("coordinates").textContent = `${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+}
+
+function flyToLocation(lat, lon, name = "選取地點") {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+  if (map) {
+    map.flyTo([lat, lon], Math.max(map.getZoom(), 8), {
+      duration: 1.1
+    });
+  }
+
+  updateCoordinates(lat, lon);
+  $("locationLabel").textContent = name;
+  loadForecast(lat, lon, name);
+
+  if (mapMode === "windy" && windyPicker) {
+    try {
+      windyPicker.open({lat, lon});
+    } catch (e) {
+      console.warn("Windy picker 無法開啟：", e);
+    }
+  }
+}
+
+function initFallbackMap(message) {
+  if (mapMode === "fallback") return;
+
+  const host = $("map");
+  host.classList.remove("hidden");
+  $("windy").style.display = "none";
+
+  if (!window.L) {
+    setStatus("地圖程式載入失敗");
+    toast("Leaflet 無法載入，請檢查網路連線。");
+    return;
+  }
+
+  mapMode = "fallback";
+  map = L.map("map", {
+    zoomControl: false,
+    preferCanvas: true
+  }).setView(
+    [DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon],
+    DEFAULT_LOCATION.zoom
+  );
+
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }
+  ).addTo(map);
+
+  L.control.zoom({position: "bottomright"}).addTo(map);
+
+  map.on("click", event => {
+    flyToLocation(event.latlng.lat, event.latlng.lng, "地圖選取點");
+  });
+
+  map.on("moveend", () => {
+    const center = map.getCenter();
+    updateCoordinates(center.lat, center.lng);
+  });
+
+  $("mapMode").textContent = "備援地圖模式";
+  setStatus("備援地圖已載入", true);
+
+  if (message) toast(message);
+
+  updateCoordinates(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon);
+  loadForecast(
+    DEFAULT_LOCATION.lat,
+    DEFAULT_LOCATION.lon,
+    DEFAULT_LOCATION.name
+  );
+}
+
+function initWindyMap() {
+  const key = CONFIG.WINDY_MAP_KEY;
+
+  if (!key || key.startsWith("YOUR_")) {
+    initFallbackMap("尚未設定 Windy API Key，目前使用備援地圖。");
+    return;
+  }
+
+  if (typeof windyInit !== "function") {
+    initFallbackMap("Windy 程式載入失敗，目前使用備援地圖。");
+    return;
+  }
+
+  try {
+    windyInit({
+      key,
+      lat: DEFAULT_LOCATION.lat,
+      lon: DEFAULT_LOCATION.lon,
+      zoom: DEFAULT_LOCATION.zoom,
+      verbose: true
+    }, api => {
+      const {map: windyMap, store, picker} = api;
+
+      map = windyMap;
+      windyStore = store;
+      windyPicker = picker;
+      mapMode = "windy";
+
+      $("map").classList.add("hidden");
+      $("windy").style.display = "block";
+
+      try {
+        const allowed = store.getAllowed("overlay");
+        console.info("Windy 可用圖層：", allowed);
+
+        if (!Array.isArray(allowed) || allowed.includes("wind")) {
+          store.set("overlay", "wind");
+        }
+
+        store.set("particlesAnim", "on");
+      } catch (error) {
+        console.warn("Windy 預設圖層設定失敗：", error);
+      }
+
+      map.on("click", event => {
+        const {lat, lng} = event.latlng;
+        updateCoordinates(lat, lng);
+        $("locationLabel").textContent = "地圖選取點";
+        loadForecast(lat, lng, "地圖選取點");
+      });
+
+      map.on("moveend", () => {
+        const center = map.getCenter();
+        updateCoordinates(center.lat, center.lng);
+      });
+
+      $("mapMode").textContent = "Windy Map Forecast";
+      setStatus("Windy 地圖已連線", true);
+      toast("AeroCast 天氣地圖已載入");
+
+      loadForecast(
+        DEFAULT_LOCATION.lat,
+        DEFAULT_LOCATION.lon,
+        DEFAULT_LOCATION.name
+      );
+    });
+  } catch (error) {
+    console.error("Windy 初始化錯誤：", error);
+    initFallbackMap("Windy 初始化失敗，請檢查 API Key 與網域授權。");
+  }
+}
+
+function changeLayer(layer) {
+  document.querySelectorAll(".layer-btn").forEach(button => {
+    button.classList.toggle("active", button.dataset.layer === layer);
+  });
+
+  if (mapMode !== "windy" || !windyStore) {
+    toast("目前是備援地圖；需要 Windy API Key 才能顯示氣象圖層。");
+    return;
+  }
+
+  try {
+    const allowed = windyStore.getAllowed("overlay");
+
+    if (Array.isArray(allowed) && !allowed.includes(layer)) {
+      toast("目前的 Windy API 方案不支援此圖層。");
+      return;
+    }
+
+    windyStore.set("overlay", layer);
+    toast("已切換氣象圖層");
+  } catch (error) {
+    console.error("圖層切換失敗：", error);
+    toast("圖層切換失敗，請確認 API 權限。");
+  }
+}
+
+document.querySelectorAll(".layer-btn").forEach(button => {
+  button.addEventListener("click", () => {
+    changeLayer(button.dataset.layer);
+  });
+});
+
+document.querySelectorAll(".city-btn").forEach(button => {
+  button.addEventListener("click", () => {
+    flyToLocation(
+      Number(button.dataset.lat),
+      Number(button.dataset.lon),
+      button.dataset.city
+    );
+  });
+});
+
+async function searchCity() {
+  const query = $("searchInput").value.trim();
+  if (!query) {
+    toast("請輸入城市或地點名稱。");
+    return;
+  }
+
+  $("searchButton").disabled = true;
+  $("searchButton").textContent = "搜尋中";
+
+  try {
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("q", query);
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("limit", "1");
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("地點搜尋服務暫時無法使用");
+
+    const results = await response.json();
+    if (!results.length) {
+      toast("找不到這個地點，請嘗試其他名稱。");
+      return;
+    }
+
+    const result = results[0];
+    flyToLocation(
+      Number(result.lat),
+      Number(result.lon),
+      result.name || query
+    );
+    showTab("forecast");
+  } catch (error) {
+    console.error(error);
+    toast("搜尋失敗，請稍後再試。");
+  } finally {
+    $("searchButton").disabled = false;
+    $("searchButton").textContent = "搜尋";
+  }
+}
+
+$("searchButton").addEventListener("click", searchCity);
+$("searchInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") searchCity();
+});
+
+$("locateButton").addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    toast("此瀏覽器不支援定位功能。");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      flyToLocation(
+        position.coords.latitude,
+        position.coords.longitude,
+        "目前位置"
+      );
+      showTab("forecast");
+    },
+    error => {
+      console.warn("定位失敗：", error);
+      toast("無法取得位置，請允許瀏覽器使用定位。");
+    },
+    {enableHighAccuracy: false, timeout: 10000}
+  );
+});
+
+function safeNumber(value, digits = 1, suffix = "") {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+    return "—";
+  }
+  return Number(value).toFixed(digits) + suffix;
+}
+
+function renderForecast(data, lat, lon, name, dailyData) {
+  const current = data.current || {};
+  const daily = dailyData.daily || {};
+  const weatherCode = Number(current.weather_code);
+
+  const conditions = {
+    0: "晴朗",
+    1: "大致晴朗",
+    2: "局部多雲",
+    3: "陰天",
+    45: "有霧",
+    48: "霧凇",
+    51: "毛毛雨",
+    53: "毛毛雨",
+    55: "較強毛毛雨",
+    61: "小雨",
+    63: "中雨",
+    65: "大雨",
+    71: "小雪",
+    73: "中雪",
+    75: "大雪",
+    80: "陣雨",
+    81: "較強陣雨",
+    82: "強陣雨",
+    95: "雷雨",
+    96: "雷雨伴冰雹",
+    99: "強雷雨伴冰雹"
+  };
+
+  const condition = conditions[weatherCode] || "天氣狀況";
+  const wind = safeNumber(current.wind_speed_10m, 1, " km/h");
+  const humidity = safeNumber(current.relative_humidity_2m, 0, "%");
+  const rain = safeNumber(current.precipitation, 1, " mm");
+  const gust = safeNumber(current.wind_gusts_10m, 1, " km/h");
+  const temp = safeNumber(current.temperature_2m, 1, "°");
+
+  const days = (daily.time || []).map((date, i) => {
+    const code = Number(daily.weather_code?.[i]);
+    const label = conditions[code] || "—";
+    const min = safeNumber(daily.temperature_2m_min?.[i], 0, "°");
+    const max = safeNumber(daily.temperature_2m_max?.[i], 0, "°");
+    const rainChance = safeNumber(
+      daily.precipitation_probability_max?.[i], 0, "%"
+    );
+
+    return `
+      <div class="daily-row">
+        <span>${escapeHtml(date)}</span>
+        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(min)} / ${escapeHtml(max)}</span>
+      </div>
+      <div class="small" style="text-align:right;padding:0 0 7px">
+        降雨機率 ${escapeHtml(rainChance)}
+      </div>`;
+  }).join("");
+
+  $("forecastContent").innerHTML = `
+    <div class="weather-hero">
+      <div class="small">${escapeHtml(name || "選取地點")}</div>
+      <div style="font-size:11px;color:#7dd3fc;margin-top:7px">
+        ${lat.toFixed(3)}, ${lon.toFixed(3)}
+      </div>
+      <div class="temp">${escapeHtml(temp)}</div>
+      <div style="font-size:13px;font-weight:700">${escapeHtml(condition)}</div>
+      <div class="small" style="margin-top:8px">
+        更新時間：${escapeHtml(current.time || "—")}
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="name">風速</div>
+        <div class="value">${escapeHtml(wind)}</div>
+      </div>
+      <div class="metric">
+        <div class="name">相對濕度</div>
+        <div class="value">${escapeHtml(humidity)}</div>
+      </div>
+      <div class="metric">
+        <div class="name">降雨量</div>
+        <div class="value">${escapeHtml(rain)}</div>
+      </div>
+      <div class="metric">
+        <div class="name">陣風</div>
+        <div class="value">${escapeHtml(gust)}</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:23px">7-DAY FORECAST</div>
+    ${days || '<p class="small">目前沒有七日預報資料。</p>'}
+
+    <p class="small" style="line-height:1.7;margin-top:15px">
+      資料來源：Open-Meteo。此處為預報服務資料，並非 Windy API 回傳值。
+    </p>
+  `;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+async function loadForecast(lat, lon, name = "選取地點") {
+  const requestId = ++currentRequest;
+
+  $("forecastContent").innerHTML = `
+    <div class="weather-hero">
+      <div style="font-size:13px;font-weight:700">正在載入天氣資料…</div>
+      <p class="small" style="margin-top:8px">正在連線至天氣預報服務。</p>
+    </div>
+  `;
+
+  showTab("forecast");
+
+  try {
+    const url = new URL("https://api.open-meteo.com/v1/forecast");
+    url.searchParams.set("latitude", lat);
+    url.searchParams.set("longitude", lon);
+    url.searchParams.set(
+      "current",
+      "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m"
+    );
+    url.searchParams.set(
+      "daily",
+      "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+    );
+    url.searchParams.set("forecast_days", "7");
+    url.searchParams.set("timezone", "auto");
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("天氣 API 回應失敗");
+
+    const data = await response.json();
+
+    if (requestId !== currentRequest) return;
+
+    renderForecast(data, lat, lon, name, data);
+    setStatus("天氣資料已更新", true);
+
+    if (CONFIG.WEBCAMS_KEY &&
+        !CONFIG.WEBCAMS_KEY.startsWith("YOUR_")) {
+      loadWebcams(lat, lon);
+    }
+  } catch (error) {
+    console.error("天氣資料載入失敗：", error);
+
+    if (requestId !== currentRequest) return;
+
+    $("forecastContent").innerHTML = `
+      <div class="weather-hero">
+        <div style="font-weight:700">無法取得天氣資料</div>
+        <p class="small" style="line-height:1.8;margin-top:8px">
+          請檢查網路連線後重試。這裡不會以虛構數值代替實際天氣。
+        </p>
+        <button class="btn" id="retryForecast" style="margin-top:8px">
+          重新載入
+        </button>
+      </div>
+    `;
+
+    $("retryForecast").addEventListener("click", () => {
+      loadForecast(lat, lon, name);
+    });
+
+    setStatus("天氣資料載入失敗");
+  }
+}
+
+async function loadWebcams(lat, lon) {
+  const container = $("webcamContent");
+
+  container.textContent = "正在搜尋附近攝影機…";
+
+  /*
+   * Webcam API 的端點、回應格式及訂閱權限可能因 API 版本而異。
+   * 如果你的帳號提供不同 API 規格，請依官方文件調整此函式。
+   */
+  try {
+    const endpoint =
+      `https://api.windy.com/api/webcams/v2/list/nearby=` +
+      `${lat},${lon},50?show=webcams:player,image,location`;
+
+    const response = await fetch(endpoint, {
+      headers: {"x-windy-key": CONFIG.WEBCAMS_KEY}
+    });
+
+    if (!response.ok) {
+      throw new Error("Webcams API 回應：" + response.status);
+    }
+
+    const payload = await response.json();
+    const cameras = payload.result?.webcams || [];
+
+    if (!cameras.length) {
+      container.textContent = "附近沒有可顯示的攝影機，或 API 未回傳結果。";
+      return;
+    }
+
+    container.innerHTML = cameras.slice(0, 10).map(camera => {
+      const title = escapeHtml(camera.title || "附近攝影機");
+      const imageUrl = camera.image?.current?.preview ||
+                       camera.image?.current?.thumbnail ||
+                       camera.image;
+
+      const safeImage = typeof imageUrl === "string" &&
+                        /^https?:\/\//i.test(imageUrl)
+                        ? imageUrl : "";
+
+      return `
+        <div class="metric" style="margin-top:10px">
+          ${safeImage ? `
+            <img
+              src="${escapeHtml(safeImage)}"
+              alt="${title}"
+              loading="lazy"
+              style="width:100%;height:120px;object-fit:cover;border-radius:8px"
+            >` : ""}
+          <div style="font-weight:700;margin-top:8px">${title}</div>
+        </div>`;
+    }).join("");
+  } catch (error) {
+    console.warn("Webcams 載入失敗：", error);
+    container.textContent =
+      "目前無法載入 Webcam。請確認金鑰、API 版本與訂閱權限。";
+  }
+}
+
+window.addEventListener("load", () => {
+  initWindyMap();
+});
+</script>
+</body>
+</html>
