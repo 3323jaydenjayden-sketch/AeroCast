@@ -328,13 +328,23 @@
             const activeBtn = document.getElementById(`btn-${layerName}`);
             if (activeBtn) activeBtn.classList.add('active');
 
-            const layerTitles = {
-                'wind': '風速與風場',
-                'temp': '氣溫分佈',
-                'rain': '降雨與雷達',
-                'clouds': '雲層覆蓋',
-                'pressure': '氣壓分佈'
-            };
+           const layerTitles = {
+    // 您原本的設定（非常正確）
+    'wind': '風速與風場',
+    'temp': '氣溫分佈',
+    'rainAccu': '累積降雨量', // 修正更精準的語意
+    'clouds': '雲層覆蓋',
+    'pressure': '氣壓分佈',
+
+    // 常用擴充圖層
+    'rain': '降雨量(即時/3小時)',
+    'radar': '天氣雷達',
+    'satellite': '衛星雲圖',
+    'waves': '浪高與海浪',
+    'rh': '相對濕度',
+    'gust': '陣風'
+};
+;
             showToast(`已切換至圖層：${layerTitles[layerName] || layerName}`);
         }
 
